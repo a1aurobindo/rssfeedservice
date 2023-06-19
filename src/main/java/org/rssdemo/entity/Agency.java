@@ -1,4 +1,4 @@
-package com.example.mfrfsdemo.entity;
+package org.rssdemo.entity;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;

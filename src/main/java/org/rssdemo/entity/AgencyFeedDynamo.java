@@ -1,2 +1,4 @@
-package org.rssdemo.entity;public class AgencyFeedDynamo {
+package org.rssdemo.entity;
+
+public class AgencyFeedDynamo {
 }

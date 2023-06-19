@@ -1,45 +1,45 @@
-package com.example.mfrfsdemo.entity;
+package org.rssdemo.entity;
 
-import javax.persistence.Column;
-import javax.persistence.Entity;
-import javax.persistence.Id;
-import javax.persistence.Table;
+import org.springframework.data.mongodb.core.mapping.Document;
+import org.springframework.data.mongodb.core.mapping.Field;
+import org.springframework.data.mongodb.core.mapping.MongoId;
+
 import java.io.Serializable;
-import java.time.format.DateTimeParseException;
 import java.util.Date;
 
-@Entity
-@Table(name ="news")
+@Document
 public class News implements Serializable {
     private static final long serialVersionUID = 1L;
 
-    @Id
-    @Column
-    Integer newsId;
+    @MongoId
+    String newsId;
 
-    @Column
+    @Field
     String newsTitle;
 
-    @Column
+    @Field
     String newsDescription;
 
-    @Column
+    @Field
     Date newsPublishDateTime;
 
-    @Column
+    @Field
     String newsLink;
 
-    @Column
+    @Field
     Integer clickCount;
 
-    @Column
+    @Field
     Integer categoryId;
 
-    public Integer getNewsId() {
+    @Field
+    Integer agencyId;
+
+    public String getNewsId() {
         return newsId;
     }
 
-    public void setNewsId(Integer newsId) {
+    public void setNewsId(String newsId) {
         this.newsId = newsId;
     }
 
@@ -89,5 +89,13 @@ public class News implements Serializable {
 
     public void setCategoryId(Integer categoryId) {
         this.categoryId = categoryId;
+    }
+
+    public Integer getAgencyId() {
+        return agencyId;
+    }
+
+    public void setAgencyId(Integer agencyId) {
+        this.agencyId = agencyId;
     }
 }

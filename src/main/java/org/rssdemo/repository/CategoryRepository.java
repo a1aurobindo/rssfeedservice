@@ -1,9 +1,11 @@
-package com.example.mfrfsdemo.repository;
+package org.rssdemo.repository;
 
-import com.example.mfrfsdemo.entity.Category;
+import org.rssdemo.entity.Category;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
 public interface CategoryRepository extends JpaRepository<Category, Integer> {
+
+    Category findByCategoryTitle(String categoryTitle);
 }

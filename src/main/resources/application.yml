@@ -1,0 +1,7 @@
+spring:
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuerUri: https://cognito-idp.us-east-1.amazonaws.com/us-east-1_hG68GYSbu
+          jwk-set-uri: https://cognito-idp.us-east-1.amazonaws.com/us-east-1_hG68GYSbu/.well-known/jwks.json

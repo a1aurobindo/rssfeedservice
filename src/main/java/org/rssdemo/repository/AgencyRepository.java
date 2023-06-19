@@ -1,6 +1,6 @@
-package com.example.mfrfsdemo.repository;
+package org.rssdemo.repository;
 
-import com.example.mfrfsdemo.entity.Agency;
+import org.rssdemo.entity.Agency;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

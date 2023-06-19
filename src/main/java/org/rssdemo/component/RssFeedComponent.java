@@ -7,22 +7,29 @@ import com.rometools.rome.feed.WireFeed;
 import com.rometools.rome.feed.rss.Channel;
 import com.rometools.rome.io.FeedException;
 import com.rometools.rome.io.WireFeedInput;
-import com.rometools.utils.Lists;
 import org.apache.commons.lang3.StringUtils;
 import org.rssdemo.domain.NewsViewDTO;
 import org.rssdemo.entity.AgencyFeed;
 import org.rssdemo.entity.Category;
 import org.rssdemo.entity.News;
+import org.rssdemo.entity.NewsCategoryUserMeta;
 import org.rssdemo.repository.AgencyFeedRepository;
 import org.rssdemo.repository.CategoryRepository;
 import org.rssdemo.repository.NewsRepository;
-import org.springframework.data.domain.Page;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
 import org.xml.sax.InputSource;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbEnhancedClient;
+import software.amazon.awssdk.enhanced.dynamodb.DynamoDbTable;
+import software.amazon.awssdk.enhanced.dynamodb.Key;
+import software.amazon.awssdk.enhanced.dynamodb.TableSchema;
+import software.amazon.awssdk.enhanced.dynamodb.model.GetItemEnhancedRequest;
+import software.amazon.awssdk.services.dynamodb.model.DynamoDbException;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -30,7 +37,14 @@ import java.net.URL;
 import java.util.*;
 
 @Component
-public class RssFeedReaderComponent {
+public class RssFeedComponent {
+
+    @Value("${aws.dynamodb.table.rss_meta}")
+    String tableName;
+    @Value("${aws.dynamodb.table.rss_meta.partkey}")
+    String partitionKeyName;
+    @Value("${aws.dynamodb.table.rss_meta.sortkey}")
+    String sortKeyName;
 
     WireFeed feed = null;
 
@@ -39,15 +53,18 @@ public class RssFeedReaderComponent {
 
     CategoryRepository categoryRepository;
 
+    @Autowired
+    private DynamoDbEnhancedClient dynamoDbEnhancedClient;
+
     private static final ObjectMapper mapper;
     static {
         mapper = new ObjectMapper();
         mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     }
 
-    public RssFeedReaderComponent(NewsRepository newsRepository,
-                                  AgencyFeedRepository agencyFeedRepository,
-                                  CategoryRepository categoryRepository) {
+    public RssFeedComponent(NewsRepository newsRepository,
+                            AgencyFeedRepository agencyFeedRepository,
+                            CategoryRepository categoryRepository) {
         this.newsRepository = newsRepository;
         this.agencyFeedRepository = agencyFeedRepository;
         this.categoryRepository = categoryRepository;
@@ -135,5 +152,80 @@ public class RssFeedReaderComponent {
         Optional<News> news = newsRepository.findById(newsId);
         news.ifPresent(n -> n.setClickCount(n.getClickCount() + 1));
         newsRepository.save(news.get());
+    }
+
+    public boolean saveItem(String username, Integer categoryId) {
+
+        try {
+            Category category = this.categoryRepository.findById(categoryId).get();
+            DynamoDbTable<NewsCategoryUserMeta> mappedTable = dynamoDbEnhancedClient.table(tableName, TableSchema.fromBean(NewsCategoryUserMeta.class));
+
+            // Populate the Table.
+            NewsCategoryUserMeta custRecord = new NewsCategoryUserMeta();
+            custRecord.setCategoryId(category.getCategoryTitle());
+            custRecord.setUsername(username);
+
+            NewsCategoryUserMeta newsCategoryUserMeta = getItem(username, categoryId);
+            if(Objects.nonNull(newsCategoryUserMeta)) {
+                updateItem(username, categoryId, newsCategoryUserMeta.getCount());
+            } else {
+                // Put the customer data into an Amazon DynamoDB table.
+                mappedTable.putItem(custRecord);
+            }
+
+            return true;
+
+        } catch (DynamoDbException e) {
+            System.err.println(e.getMessage());
+            System.exit(1);
+        }
+        System.out.println("Customer data added to the table with id id101");
+        return false;
+    }
+
+    private NewsCategoryUserMeta updateItem(String username, Integer category, Integer count) {
+
+        try {
+
+            DynamoDbTable<NewsCategoryUserMeta> mappedTable = dynamoDbEnhancedClient.table(tableName, TableSchema.fromBean(NewsCategoryUserMeta.class));
+            Key key = Key.builder()
+                    .partitionValue(username)
+                    .build();
+
+            // Get the item by using the key and update the email value.
+            NewsCategoryUserMeta newsCategoryUserMeta = mappedTable.getItem(r->r.key(key));
+            newsCategoryUserMeta.setCategoryId(category.toString());
+            newsCategoryUserMeta.setCount(count);
+
+            return newsCategoryUserMeta;
+
+        } catch (DynamoDbException e) {
+            System.err.println(e.getMessage());
+            System.exit(1);
+        }
+
+        return null;
+    }
+
+    public NewsCategoryUserMeta getItem(String username, Integer categoryId) {
+
+        NewsCategoryUserMeta result = null;
+
+        try {
+            DynamoDbTable<NewsCategoryUserMeta> mappedTable = dynamoDbEnhancedClient.table(tableName, TableSchema.fromBean(NewsCategoryUserMeta.class));
+            Key key = Key.builder()
+                    .partitionValue(username).sortValue(categoryId)
+                    .build();
+
+            // Get the item by using the key.
+            result = mappedTable.getItem(
+                    (GetItemEnhancedRequest.Builder requestBuilder) -> requestBuilder.key(key));
+            System.out.println("******* The description value is " + result.getUsername());
+
+        } catch (DynamoDbException e) {
+            System.err.println(e.getMessage());
+            System.exit(1);
+        }
+        return result;
     }
 }
